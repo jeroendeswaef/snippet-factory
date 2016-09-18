@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Snippet } from './snippet';
 
 @Component({
     selector: 'my-app',
@@ -18,8 +19,19 @@ import { Component } from '@angular/core';
     </div>
 
     <div class="ui main text container">
-    	<edit-snippet></edit-snippet>
+    	<edit-snippet (save)="addSnippet($event)"></edit-snippet>
     </div>
     `
 })
-export class AppComponent { }
+export class AppComponent {
+	snippets: Snippet[];
+
+	constructor() {
+		this.snippets = []
+	}
+
+	addSnippet(snippet: Snippet): void {
+		this.snippets.push(snippet);
+	}
+}
+
