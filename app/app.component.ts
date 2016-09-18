@@ -18,7 +18,7 @@ import { Component } from '@angular/core';
     </div>
 
     <div class="ui main text container">
-    	Hello
+    	<edit-snippet></edit-snippet>
     </div>
     `
 })
