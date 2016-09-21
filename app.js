@@ -6,9 +6,9 @@ var app = express();
 app.use(bodyParser.json());  
 app.use(express.static('public'));
 
-var sequelize = new Sequelize('sqlite://snippet-db');
+var sequelize = new Sequelize('sqlite://snippets.db');
 
-var SnippetTable = sequelize.define('snippet', {
+var SnippetRow = sequelize.define('snippet', {
     name: Sequelize.STRING,
     fileSelector: Sequelize.STRING,
     search: Sequelize.STRING,
@@ -21,6 +21,15 @@ var SnippetTable = sequelize.define('snippet', {
 
 app.post('/add-snippet', function(req, res) {
 	console.log('Inside add-snippet', req.body);
+	var ret = SnippetRow.create({
+		name: req.body.name,
+		fileSelector: req.body.fileSelector,
+		search: req.body.search,
+		replace: req.body.replace
+	}).then(function(m){
+  console.log(m.dataValues.id); // Prints the id of the newly created model
+});
+	//console.log(ret);
 	res.json(req.body);
 });
 
