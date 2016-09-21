@@ -21,6 +21,29 @@ import { Snippet } from './snippet';
     <div class="ui main text container">
     	<edit-snippet (save)="addSnippet($event)"></edit-snippet>
     </div>
+
+    <table class="ui celled padded table">
+        <thead>
+            <tr>
+            	<th>Name</th>
+    			<th>Active</th>
+    			<th></th>
+    		</tr>
+    	</thead>
+  		<tbody>
+  			<tr *ngFor="let snippet of sortedSnippets()">
+  				<td class="single line">
+        			{{snippet.name}}
+      			</td>
+      			<td class="single line">
+        			True
+      			</td>
+      			<td class="single line">
+        			TODO
+      			</td>
+  			</tr>
+  		</tbody>
+  	</table>
     `
 })
 export class AppComponent {
@@ -32,6 +55,10 @@ export class AppComponent {
 
 	addSnippet(snippet: Snippet): void {
 		this.snippets.push(snippet);
+	}
+
+	sortedSnippets(): Snippet[] {
+		return this.snippets;
 	}
 }
 
