@@ -1,7 +1,11 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { Snippet } from './snippet';
+import { SnippetService } from './snippet.service';
+
+import './rxjs-operators';
 
 @Component({
+    providers: [ SnippetService ],
     selector: 'edit-snippet',
     template: `
 
@@ -36,9 +40,12 @@ export class EditSnippetComponent {
     @Output() save: EventEmitter<Snippet> = new EventEmitter();
     snippet: Snippet;
 
+    constructor (private snippedService: SnippetService) {}
+
     addSnippet(snippetNameEl: HTMLInputElement, fileSelectorEl: HTMLInputElement, searchEl: HTMLInputElement, replaceEl: HTMLInputElement, e: Event): void {
         this.snippet = new Snippet(snippetNameEl.value, fileSelectorEl.value, searchEl.value, replaceEl.value);
         this.save.next(this.snippet);
+        this.snippedService.addSnippet(this.snippet);
         e.preventDefault();
     }
 }
