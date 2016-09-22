@@ -1,14 +1,4 @@
 
 export class Snippet {
-	name: string;
-	fileSelector: string;
-	search: string;
-	replace: string;
-
-	constructor(name: string, fileSelector: string, search: string, replace: string) {
-		this.name = name;
-		this.fileSelector = fileSelector;
-		this.search = search;
-		this.replace = replace;
-	}
+	constructor(public id: number, public name: string, public fileSelector: string, public search: string, public replace: string) {}
 }

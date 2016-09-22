@@ -9,10 +9,10 @@ app.use(express.static('public'));
 var sequelize = new Sequelize('sqlite://snippets.db');
 
 var SnippetRow = sequelize.define('snippet', {
-    name: Sequelize.STRING,
-    fileSelector: Sequelize.STRING,
-    search: Sequelize.STRING,
-    replace: Sequelize.STRING
+    name: { type: Sequelize.STRING, allowNull: false, unique: true, validate: { notEmpty: true } },
+    fileSelector: { type: Sequelize.STRING, allowNull: false },
+    search: { type: Sequelize.STRING, allowNull: false },
+    replace: { type: Sequelize.STRING, allowNull: false }
 });
 
 /*app.get('/', function (req, res) {
@@ -20,17 +20,26 @@ var SnippetRow = sequelize.define('snippet', {
 });*/
 
 app.post('/add-snippet', function(req, res) {
-	console.log('Inside add-snippet', req.body);
-	var ret = SnippetRow.create({
+	SnippetRow.create({
 		name: req.body.name,
 		fileSelector: req.body.fileSelector,
 		search: req.body.search,
 		replace: req.body.replace
 	}).then(function(m){
-  console.log(m.dataValues.id); // Prints the id of the newly created model
+  		console.log(m.dataValues.id); // Prints the id of the newly created model
+		res.json(req.body);
+	}).catch(function (err) {
+		res.status(400).send(err);
+	});
 });
-	//console.log(ret);
-	res.json(req.body);
+
+app.get('/snippets', function(req, res) {
+	SnippetRow.findAll({})
+		.then(function(snippets) {
+			res.json(snippets);
+		}).catch(function (err) {
+			res.status(500).send(err);
+		});
 });
 
 sequelize.sync().then(function() {
