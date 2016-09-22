@@ -1,10 +1,11 @@
+var _ = require('lodash/core');
 var express = require('express');
 var bodyParser = require('body-parser');
 var Sequelize = require('sequelize');
 var app = express();
 
 app.use(bodyParser.json());  
-app.use(express.static('public'));
+app.use('/static', express.static('public'));
 
 var sequelize = new Sequelize('sqlite://snippets.db');
 
@@ -15,25 +16,28 @@ var SnippetRow = sequelize.define('snippet', {
     replace: { type: Sequelize.STRING, allowNull: false }
 });
 
-/*app.get('/', function (req, res) {
-  res.send('Hello World!');
-});*/
-
-app.post('/add-snippet', function(req, res) {
-	SnippetRow.create({
-		name: req.body.name,
-		fileSelector: req.body.fileSelector,
-		search: req.body.search,
-		replace: req.body.replace
-	}).then(function(m){
-  		console.log(m.dataValues.id); // Prints the id of the newly created model
-		res.json(req.body);
-	}).catch(function (err) {
-		res.status(400).send(err);
-	});
+app.post('/api/snippet', function(req, res) {
+	if (req.body.id) {
+		SnippetRow.findById(req.body.id)
+			.then(function(snippet) {
+				snippet = _.extend(snippet, {
+					name: req.body.name,
+					fileSelector: req.body.fileSelector,
+					search: req.body.search,
+					replace: req.body.replace
+				});
+				snippet.save().then(function() {
+					res.json(snippet);
+				}).catch(function (err) {
+					res.status(422).send(err);
+				});
+			}).catch(function (err) {
+				res.status(400).send(err);
+			});
+	}
 });
 
-app.get('/snippets', function(req, res) {
+app.get('/api/snippets', function(req, res) {
 	SnippetRow.findAll({})
 		.then(function(snippets) {
 			res.json(snippets);
@@ -42,8 +46,26 @@ app.get('/snippets', function(req, res) {
 		});
 });
 
+app.get('/api/snippet/:id', function(req, res) {
+	console.info(req.params.id);
+	SnippetRow.findById(req.params.id)
+		.then(function(snippet) {
+			res.json(snippet);
+		}).catch(function (err) {
+			res.status(500).send(err);
+		});
+});
+
+app.all('*', function(req, res) {
+	res.sendFile('index.html', {root: './public'});
+});
+
 sequelize.sync().then(function() {
 	app.listen(3000, function () {
 		console.log('Example app listening on port 3000!');
 	});
+});
+
+process.on('uncaughtException', function(err) {
+  console.log('Caught exception: ' + err);
 });

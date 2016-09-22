@@ -5,9 +5,24 @@ import { AppComponent }  from './app.component';
 import { EditSnippetComponent }  from './edit-snippet.component';
 import { SnippetListComponent } from './snippet-list.component';
 
+import { routing, appRoutingProviders } from './app.routing';
+
 @NgModule({
-  imports: [ BrowserModule, HttpModule ],
-  declarations: [ AppComponent, EditSnippetComponent, SnippetListComponent ],
-  bootstrap: [ AppComponent ]
+	imports: [ 
+  		BrowserModule, 
+  		HttpModule,
+  		routing
+  	],
+  	declarations: [ 
+  		AppComponent, 
+  		EditSnippetComponent, 
+  		SnippetListComponent 
+  	],
+  	providers: [
+  		appRoutingProviders
+  	],
+  	bootstrap: [ 
+  		AppComponent 
+  	]
 })
 export class AppModule { }

@@ -8,7 +8,7 @@ import { Snippet } from './snippet';
     <div class="ui menu">
       <div class="ui container">
         <a href="#" class="header item">
-          <img class="logo" src="resources/images/factory.png">
+          <img class="logo" src="/static/resources/images/factory.png">
         </a>
         <div class="header item borderless">
           <h1 class="ui header">
@@ -18,7 +18,9 @@ import { Snippet } from './snippet';
       </div>
     </div>
 
-    <snippet-list></snippet-list>
+    <!-- Routed views go here -->
+    <router-outlet></router-outlet>
+
     <!--<div class="ui main text container">
     	<edit-snippet (save)="addSnippet($event)"></edit-snippet>
     </div>-->
