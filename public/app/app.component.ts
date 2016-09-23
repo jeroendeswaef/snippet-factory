@@ -20,10 +20,6 @@ import { Snippet } from './snippet';
 
     <!-- Routed views go here -->
     <router-outlet></router-outlet>
-
-    <!--<div class="ui main text container">
-    	<edit-snippet (save)="addSnippet($event)"></edit-snippet>
-    </div>-->
     `
 })
 export class AppComponent {
@@ -31,10 +27,6 @@ export class AppComponent {
 
 	constructor() {
 		this.snippets = []
-	}
-
-	addSnippet(snippet: Snippet): void {
-		this.snippets.push(snippet);
 	}
 
 	sortedSnippets(): Snippet[] {

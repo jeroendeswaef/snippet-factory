@@ -41,25 +41,29 @@ export class EditSnippetComponent {
     @Output() save: EventEmitter<Snippet> = new EventEmitter();
     snippet: Snippet;
     errorMessage: string;
+    isCreating: boolean;
 
     constructor (
         private snippedService: SnippetService,
         private route: ActivatedRoute,
         private router: Router
     ) {
-        this.snippet = new Snippet();
+        this.snippet = new Snippet(null, '', '', '', '');
     }
 
     ngOnInit() {
         this.route.params.forEach((params: Params) => {
-            let id = +params['id']; // (+) converts string 'id' to a number
-            console.info(id);
-            // this.snippedService.getHero(id).then(hero => this.hero = hero);
-            this.snippedService.getSnippet(id)
-                .subscribe(
-                    snippet => (this.snippet = snippet) && console.info(snippet),
-                    error =>  this.errorMessage = <any>error
-                );
+            if (params['id'] !== 'new') {
+                this.isCreating = false;
+                let id = +params['id']; // (+) converts string 'id' to a number
+                this.snippedService.getSnippet(id)
+                    .subscribe(
+                        snippet => this.snippet = snippet,
+                        error =>  this.errorMessage = <any>error
+                    );
+            } else {
+                this.isCreating = true;
+            }
         });
     }
 
@@ -69,7 +73,8 @@ export class EditSnippetComponent {
         this.snippet.search = searchEl.value;
         this.snippet.replace = replaceEl.value;
         this.save.next(this.snippet);
-        this.snippedService.saveSnippet(this.snippet);
+        this.snippedService.saveSnippet(this.snippet)
+            .subscribe( snippets => this.router.navigate(['/']));
         e.preventDefault();
     }
 }

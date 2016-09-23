@@ -17,23 +17,30 @@ var SnippetRow = sequelize.define('snippet', {
 });
 
 app.post('/api/snippet', function(req, res) {
+	var props = {
+		name: req.body.name,
+		fileSelector: req.body.fileSelector,
+		search: req.body.search,
+		replace: req.body.replace
+	};
 	if (req.body.id) {
 		SnippetRow.findById(req.body.id)
 			.then(function(snippet) {
-				snippet = _.extend(snippet, {
-					name: req.body.name,
-					fileSelector: req.body.fileSelector,
-					search: req.body.search,
-					replace: req.body.replace
-				});
+				snippet = _.extend(snippet, props);
 				snippet.save().then(function() {
 					res.json(snippet);
 				}).catch(function (err) {
-					res.status(422).send(err);
+					res.status(400).send(err);
 				});
 			}).catch(function (err) {
 				res.status(400).send(err);
 			});
+	} else {
+		SnippetRow.create(props).then(function(snippet) {
+			res.json(snippet);
+		}).catch(function (err) {
+			res.status(400).send(err);
+		});
 	}
 });
 

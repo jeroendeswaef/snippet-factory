@@ -8,7 +8,6 @@ import { Snippet } from './snippet';
 export class SnippetService {
 	constructor(private http: Http) {}
 	
-	private urlAddSnippet: string = '/api/add-snippet';
 	private urlSaveSnippet: string = '/api/snippet';
 	private urlGetSnippets: string = '/api/snippets';
 	private urlGetSnippet: string = '/api/snippet';
@@ -26,25 +25,13 @@ export class SnippetService {
             .catch(this.handleError);
 	}
 
-	addSnippet(snippet: Snippet) {
+	saveSnippet(snippet: Snippet): Observable<Snippet> {
 		var body = this.snippetToJsonString(snippet);
 		let headers = new Headers({ 'Content-Type': 'application/json' });
     	let options = new RequestOptions({ headers: headers });
 
-		this.http.post(this.urlAddSnippet, body, options)
-		     .toPromise()
-             .then(this.extractData)
-             .catch(this.handleError);
-	}
-
-	saveSnippet(snippet: Snippet) {
-		var body = this.snippetToJsonString(snippet);
-		let headers = new Headers({ 'Content-Type': 'application/json' });
-    	let options = new RequestOptions({ headers: headers });
-
-		this.http.post(this.urlSaveSnippet, body, options)
-		     .toPromise()
-             .then(this.extractData)
+		return this.http.post(this.urlSaveSnippet, body, options)
+			 .map(res => this.extractSnippet(res.json()))
              .catch(this.handleError);
 	}
 

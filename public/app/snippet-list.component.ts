@@ -8,7 +8,9 @@ import './rxjs-operators';
     providers: [ SnippetService ],
     selector: 'snippet-list',
     template: `
-    <button class="ui green button">Add snippet</button>
+    <a routerLink="/snippet/new">
+        <button class="ui green button">Add snippet</button>
+    </a>
     <table class="ui celled padded table">
         <thead>
             <tr>
