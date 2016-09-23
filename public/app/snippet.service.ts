@@ -25,6 +25,13 @@ export class SnippetService {
             .catch(this.handleError);
 	}
 
+	removeSnippet(id: number): Promise<void> {
+		return this.http.delete(this.urlGetSnippet + '/' + id)
+				.toPromise()
+				.then(() => null)
+    			.catch(this.handleError);
+	}
+
 	saveSnippet(snippet: Snippet): Observable<Snippet> {
 		var body = this.snippetToJsonString(snippet);
 		let headers = new Headers({ 'Content-Type': 'application/json' });

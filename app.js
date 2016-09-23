@@ -53,8 +53,16 @@ app.get('/api/snippets', function(req, res) {
 		});
 });
 
+app.delete('/api/snippet/:id', function(req, res) {
+	SnippetRow.destroy({ where: { id: req.params.id }  })
+ 		.then(function(snippet) {
+			res.json(snippet);
+		}).catch(function (err) {
+			res.status(500).send(err);
+		});
+});
+
 app.get('/api/snippet/:id', function(req, res) {
-	console.info(req.params.id);
 	SnippetRow.findById(req.params.id)
 		.then(function(snippet) {
 			res.json(snippet);

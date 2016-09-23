@@ -27,7 +27,7 @@ import './rxjs-operators';
                     <a routerLink="/snippet/{{snippet.id}}">
                         <button class="ui black button">Edit</button>
                     </a>
-                    <button class="ui red button">Delete</button>
+                    <button (click)="removeSnippet(snippet); $event.stopPropagation()" class="ui red button">Delete</button>
                 </td>
             </tr>
         </tbody>
@@ -50,6 +50,13 @@ export class SnippetListComponent implements OnInit {
                snippets => this.snippets = snippets,
                error =>  this.errorMessage = <any>error
         );
+    }
+
+    removeSnippet(snippet: Snippet) {
+         this.snippedService.removeSnippet(snippet.id)
+             .then(() => {
+                 this.snippets = this.snippets.filter(s => s !== snippet)
+             })
     }
 
     sortedSnippets(): Snippet[] {
