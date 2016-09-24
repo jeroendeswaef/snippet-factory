@@ -1,7 +1,9 @@
 var _ = require('lodash/core');
 var express = require('express');
 var bodyParser = require('body-parser');
-var Sequelize = require('sequelize');
+
+var Snippet = require('./public/app/snippet').Snippet;
+var snippetService = require('./snippet-service');
 var FileSystemModifier = require('./filesystem-modifier');
 
 var app = express();
@@ -23,46 +25,11 @@ var args = parser.parseArgs();
 app.use(bodyParser.json());  
 app.use('/static', express.static('public'));
 
-var sequelize = new Sequelize('sqlite://snippets.db');
 var modifier = new FileSystemModifier(args.directory);
 
-var SnippetRow = sequelize.define('snippet', {
-    name: { type: Sequelize.STRING, allowNull: false, unique: true, validate: { notEmpty: true } },
-    fileSelector: { type: Sequelize.STRING, allowNull: false },
-    search: { type: Sequelize.STRING, allowNull: false },
-    replace: { type: Sequelize.STRING, allowNull: false }
-});
-
-app.post('/api/snippet', function(req, res) {
-	var props = {
-		name: req.body.name,
-		fileSelector: req.body.fileSelector,
-		search: req.body.search,
-		replace: req.body.replace
-	};
-	if (req.body.id) {
-		SnippetRow.findById(req.body.id)
-			.then(function(snippet) {
-				snippet = _.extend(snippet, props);
-				snippet.save().then(function() {
-					res.json(snippet);
-				}).catch(function (err) {
-					res.status(400).send(err);
-				});
-			}).catch(function (err) {
-				res.status(400).send(err);
-			});
-	} else {
-		SnippetRow.create(props).then(function(snippet) {
-			res.json(snippet);
-		}).catch(function (err) {
-			res.status(400).send(err);
-		});
-	}
-});
-
+// Getting all snippets
 app.get('/api/snippets', function(req, res) {
-	SnippetRow.findAll({})
+	snippetService.getAll()
 		.then(function(snippets) {
 			res.json(snippets);
 		}).catch(function (err) {
@@ -70,19 +37,32 @@ app.get('/api/snippets', function(req, res) {
 		});
 });
 
-app.delete('/api/snippet/:id', function(req, res) {
-	SnippetRow.destroy({ where: { id: req.params.id }  })
- 		.then(function(snippet) {
+// Getting one snippet by id
+app.get('/api/snippet/:id', function(req, res) {
+	snippetService.get(req.params.id)
+		.then(function(snippet) {
 			res.json(snippet);
 		}).catch(function (err) {
 			res.status(500).send(err);
 		});
 });
 
-app.get('/api/snippet/:id', function(req, res) {
-	SnippetRow.findById(req.params.id)
+// Saving a snippet (creating or editing)
+app.post('/api/snippet', function(req, res) {
+	var snippet = new Snippet(req.body.id, req.body.name, req.body.fileSelector, req.body.search, req.body.replace);
+	snippetService.save(snippet)
 		.then(function(snippet) {
 			res.json(snippet);
+		}).catch(function (err) {
+			res.status(400).send(err);
+		});
+});
+
+// Deleting a snippet
+app.delete('/api/snippet/:id', function(req, res) {
+	snippetService.remove(req.params.id)
+ 		.then(function(id) {
+			res.json({ id: id });
 		}).catch(function (err) {
 			res.status(500).send(err);
 		});
@@ -92,13 +72,12 @@ app.all('*', function(req, res) {
 	res.sendFile('index.html', {root: './public'});
 });
 
-sequelize.sync().then(function() {
-	modifier.start();
-	app.listen(3000, function () {
-		console.log('Listening on port 3000!');
+snippetService.initialize().then(function() {
+	modifier.start(function() {
+		app.listen(3000, function () {
+			console.log('Listening on port 3000!');
+		});
+	}, function(err) {
+		console.error("Unable to start modifier", err);
 	});
-});
-
-process.on('uncaughtException', function(err) {
-  console.log('Caught exception: ' + err);
 });
