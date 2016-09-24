@@ -2,12 +2,29 @@ var _ = require('lodash/core');
 var express = require('express');
 var bodyParser = require('body-parser');
 var Sequelize = require('sequelize');
+var FileSystemModifier = require('./filesystem-modifier');
+
 var app = express();
 
+var ArgumentParser = require('argparse').ArgumentParser;
+var parser = new ArgumentParser({
+    version: '1.0.0',
+    addHelp: true,
+    description: 'Modifies files temporarily under the specified directory according to the rules specified in the ui'
+});
+parser.addArgument(
+    [ '-d', '--directory' ],
+    {
+        help: 'The parent directory that contains all files you want to change',
+        required: true
+    }
+);
+var args = parser.parseArgs();
 app.use(bodyParser.json());  
 app.use('/static', express.static('public'));
 
 var sequelize = new Sequelize('sqlite://snippets.db');
+var modifier = new FileSystemModifier(args.directory);
 
 var SnippetRow = sequelize.define('snippet', {
     name: { type: Sequelize.STRING, allowNull: false, unique: true, validate: { notEmpty: true } },
@@ -76,8 +93,9 @@ app.all('*', function(req, res) {
 });
 
 sequelize.sync().then(function() {
+	modifier.start();
 	app.listen(3000, function () {
-		console.log('Example app listening on port 3000!');
+		console.log('Listening on port 3000!');
 	});
 });
 
