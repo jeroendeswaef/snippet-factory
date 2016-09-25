@@ -11,7 +11,6 @@ import './rxjs-operators';
     template: `
 
     <form class="ui large form segment">
-        <h3 class="ui header">Add a Snippet {{id}}</h3>
         <div class="field">
             <label for="snippet-name">Name:</label>
             <input name="snippet-name" #nameel [value]="snippet.name">

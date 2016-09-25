@@ -18,8 +18,10 @@ import { Snippet } from './snippet';
       </div>
     </div>
 
-    <!-- Routed views go here -->
-    <router-outlet></router-outlet>
+    <div class="ui container">
+      <!-- Routed views go here -->
+      <router-outlet></router-outlet>
+    </div>
     `
 })
 export class AppComponent {

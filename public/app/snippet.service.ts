@@ -46,7 +46,10 @@ export class SnippetService {
 	}
 
 	start() {
-		this.http.post(this.urlStart, "");
+		return this.http.post(this.urlStart, "")
+			.toPromise()
+			.then(() => null)
+			.catch(this.handleError);
 	}
 
 	stop(): Promise<void> {

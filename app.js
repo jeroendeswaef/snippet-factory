@@ -67,10 +67,22 @@ app.delete('/api/snippet/:id', function(req, res) {
 		});
 });
 
-// Saving a snippet (creating or editing)
+// Restoring the original values
 app.post('/api/stop', function(req, res) {
-	modifier.stop();
-	res.send("");
+	modifier.stop().then(function() {
+		res.send("OK");
+	}).catch(function (err) {
+		res.status(500).send(err);
+	});
+});
+
+// Re-applying the modifications
+app.post('/api/start', function(req, res) {
+	modifier.start().then(function() {
+		res.send("OK");
+	}).catch(function (err) {
+		res.status(500).send(err);
+	});
 });
 
 app.all('*', function(req, res) {
@@ -117,11 +129,11 @@ process.on('SIGINT', exitHandler.bind(null, {exit:true}));
 process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
 
 snippetService.initialize().then(function() {
-	modifier.start(function() {
+	modifier.start().then(function() {
 		app.listen(3000, function () {
 			console.log('Started ui on http://localhost:3000/');
 		});
-	}, function(err) {
+	}).catch(function(err) {
 		console.error("Unable to start modifier", err);
 	});
 });

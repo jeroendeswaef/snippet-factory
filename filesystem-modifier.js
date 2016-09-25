@@ -15,57 +15,59 @@ function escapeRegExp(str) {
   return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
 }
 
-FilesystemModifier.prototype.start = function(doneCallback, errorCallback) {
+FilesystemModifier.prototype.start = function() {
 	var self = this;
-	replacements = {};
-	snippetService.getAll()
-		.then(function(snippets) {
-			var snippetsById = _.reduce(snippets, function(acc, item) {
-				item.fileRe = new RegExp(item.fileSelector);
-				acc[item.id] = item;
-				return acc;
-			}, {});
-			filewalker(self.basePath)
-				.on('file', function(filePath) {
-					Object.keys(snippetsById).forEach(function(id) {
-						var item = snippetsById[id];
-						if (item.fileRe.test(filePath)) {
-							var fullFilePath = path.join(self.basePath, filePath);
-							replacements[fullFilePath] = [];
-							fs.readFile(fullFilePath, 'utf8', function(err, contents) {
-								if (err) errorCallback(err);
-								else {
-									var searchRe = new RegExp(item.search, 'g');
-									var match;
-									var newContents = "";
-									var pos = 0;
-									while ((match = searchRe.exec(contents)) !== null) {
-										var lastReplacementPos = replacements[fullFilePath].length;
-									    //console.info(filePath + ", match found at " + match.index, searchRe.lastIndex, contents.substring(match.index, searchRe.lastIndex));
-										var original = contents.substring(match.index, searchRe.lastIndex);
-										newContents += (
-											contents.substring(pos, match.index) +
-											'/* S_' + lastReplacementPos + ' */ ' +
-											item.replace.replace('||0||', original) +
-										    ' /* E_' + lastReplacementPos + ' */' 
-										);
-										replacements[fullFilePath].push(original);
-										pos = searchRe.lastIndex;
+	return new Promise(function(resolve, reject) {
+		replacements = {};
+		snippetService.getAll()
+			.then(function(snippets) {
+				var snippetsById = _.reduce(snippets, function(acc, item) {
+					item.fileRe = new RegExp(item.fileSelector);
+					acc[item.id] = item;
+					return acc;
+				}, {});
+				filewalker(self.basePath)
+					.on('file', function(filePath) {
+						Object.keys(snippetsById).forEach(function(id) {
+							var item = snippetsById[id];
+							if (item.fileRe.test(filePath)) {
+								var fullFilePath = path.join(self.basePath, filePath);
+								replacements[fullFilePath] = [];
+								fs.readFile(fullFilePath, 'utf8', function(err, contents) {
+									if (err) reject(err);
+									else {
+										var searchRe = new RegExp(item.search, 'g');
+										var match;
+										var newContents = "";
+										var pos = 0;
+										while ((match = searchRe.exec(contents)) !== null) {
+											var lastReplacementPos = replacements[fullFilePath].length;
+										    //console.info(filePath + ", match found at " + match.index, searchRe.lastIndex, contents.substring(match.index, searchRe.lastIndex));
+											var original = contents.substring(match.index, searchRe.lastIndex);
+											newContents += (
+												contents.substring(pos, match.index) +
+												'/* S_' + lastReplacementPos + ' */ ' +
+												item.replace.replace('||0||', original) +
+											    ' /* E_' + lastReplacementPos + ' */' 
+											);
+											replacements[fullFilePath].push(original);
+											pos = searchRe.lastIndex;
+										}
+										newContents += contents.substring(pos, contents.length);
+										fs.writeFile(fullFilePath, newContents, function(err) {
+								    		if (err) reject(err);
+								    	});
 									}
-									newContents += contents.substring(pos, contents.length);
-									fs.writeFile(fullFilePath, newContents, function(err) {
-							    		if (err) errorCallback(err);
-							    	});
-								}
+								});
+							}
 							});
-						}
-						});
-					})
-				.on('error', errorCallback)
-				.on('done', doneCallback)
-				.walk();
-		}).catch(function (err) {
-			errorCallback(err);
+						})
+					.on('error', reject)
+					.on('done', resolve)
+					.walk();
+			}).catch(function (err) {
+				reject(err);
+			});
 		});
 };
 

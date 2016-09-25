@@ -5,3 +5,7 @@ form.form:after {
   clear: both;
   visibility: hidden;
 }
+
+edit-snippet .ui.form input:not([type]), edit-snippet textarea {
+	font-family: monospace;
+}
