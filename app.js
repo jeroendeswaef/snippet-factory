@@ -1,4 +1,3 @@
-var _ = require('lodash/core');
 var express = require('express');
 var bodyParser = require('body-parser');
 
@@ -68,14 +67,59 @@ app.delete('/api/snippet/:id', function(req, res) {
 		});
 });
 
+// Saving a snippet (creating or editing)
+app.post('/api/stop', function(req, res) {
+	modifier.stop();
+	res.send("");
+});
+
 app.all('*', function(req, res) {
 	res.sendFile('index.html', {root: './public'});
 });
 
+process.stdin.resume();//so the program will not close instantly
+
+/**
+ * Implementing a graceful shutdown method, so when you hit Ctrl-C,
+ * all modifications are reverted.
+ *
+ * Because we can only execute synchronous stuff in this phase,
+ * we need to 'wrap' our async 'modifier.stop' method, so it executes synchronously.
+ */
+function cleanup(){
+    var ret;
+    modifier.stop().then(function() {
+  	    ret = true;
+    }).catch(function(err) {
+    	console.error(err);
+    });
+    while(ret === undefined) {
+        require('deasync').runLoopOnce();
+    }
+    return ret;    
+}
+
+function exitHandler(options, err) {
+    if (options.cleanup) {
+		cleanup();
+    }
+    if (err) console.log(err.stack);
+    if (options.exit) process.exit();
+}
+
+//do something when app is closing
+process.on('exit', exitHandler.bind(null,{cleanup:true}));
+
+//catches ctrl+c event
+process.on('SIGINT', exitHandler.bind(null, {exit:true}));
+
+//catches uncaught exceptions
+process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
+
 snippetService.initialize().then(function() {
 	modifier.start(function() {
 		app.listen(3000, function () {
-			console.log('Listening on port 3000!');
+			console.log('Started ui on http://localhost:3000/');
 		});
 	}, function(err) {
 		console.error("Unable to start modifier", err);

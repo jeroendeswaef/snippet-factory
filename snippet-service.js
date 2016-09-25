@@ -10,7 +10,7 @@ var createSnippetFromDBAttrs = function(attrs) {
 
 module.exports = {
 	initialize: function() {
-		var sequelize = new Sequelize('sqlite://snippets.db');
+		var sequelize = new Sequelize('sqlite://snippets.db', { logging: function() {} });
 		snippetTable = sequelize.define('snippet', {
 		    name: { type: Sequelize.STRING, allowNull: false, unique: true, validate: { notEmpty: true } },
 		    fileSelector: { type: Sequelize.STRING, allowNull: false },

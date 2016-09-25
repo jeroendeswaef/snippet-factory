@@ -11,6 +11,7 @@ import './rxjs-operators';
     <a routerLink="/snippet/new">
         <button class="ui green button">Add snippet</button>
     </a>
+    <button (click)="toggleStartStop(); $event.stopPropagation()" class="ui black button">Stop</button>
     <table class="ui celled padded table">
         <thead>
             <tr>
@@ -57,6 +58,10 @@ export class SnippetListComponent implements OnInit {
              .then(() => {
                  this.snippets = this.snippets.filter(s => s !== snippet)
              })
+    }
+
+    toggleStartStop() {
+        this.snippedService.stop().then(() => {})
     }
 
     sortedSnippets(): Snippet[] {

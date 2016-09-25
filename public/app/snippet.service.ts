@@ -12,6 +12,9 @@ export class SnippetService {
 	private urlGetSnippets: string = '/api/snippets';
 	private urlGetSnippet: string = '/api/snippet';
 
+	private urlStart: string = '/api/start';
+	private urlStop: string = '/api/stop';
+
 	getSnippets(): Observable<Snippet[]> {
 		return this.http.get(this.urlGetSnippets)
             .map(res => this.extractData(res))
@@ -40,6 +43,17 @@ export class SnippetService {
 		return this.http.post(this.urlSaveSnippet, body, options)
 			 .map(res => this.extractSnippet(res.json()))
              .catch(this.handleError);
+	}
+
+	start() {
+		this.http.post(this.urlStart, "");
+	}
+
+	stop(): Promise<void> {
+		return this.http.post(this.urlStop, "")
+			.toPromise()
+			.then(() => null)
+			.catch(this.handleError);
 	}
 
 	private extractSnippet(obj: Map<string, any>): Snippet {
