@@ -1,41 +1,41 @@
 import { Injectable } from '@angular/core';
 import { Http, Headers, RequestOptionsArgs, RequestOptions, Response } from '@angular/http';
-import { Observable } from 'rxjs/Observable';
-
+import { Subject, Observable, Observer } from 'rxjs/Rx';
 import { Snippet } from './snippet';
 
 @Injectable()
 export class SnippetService {
 	constructor(private http: Http) {}
+	private socket: Subject<MessageEvent>;
 	
 	private urlSaveSnippet: string = '/api/snippet';
 	private urlGetSnippets: string = '/api/snippets';
 	private urlGetSnippet: string = '/api/snippet';
 
 	private urlStart: string = '/api/start';
-	private urlStop: string = '/api/stop';
+	private urlPause: string = '/api/pause';
 
-	getSnippets(): Observable<Snippet[]> {
+	public getSnippets(): Observable<Snippet[]> {
 		return this.http.get(this.urlGetSnippets)
             .map(res => this.extractData(res))
             .catch(this.handleError);
 	}
 
-	getSnippet(id: number): Observable<Snippet> {
+	public getSnippet(id: number): Observable<Snippet> {
 		var self = this;
 		return this.http.get(this.urlGetSnippet + '/' + id)
             .map(res => self.extractSnippet(res.json()))
             .catch(this.handleError);
 	}
 
-	removeSnippet(id: number): Promise<void> {
+	public removeSnippet(id: number): Promise<void> {
 		return this.http.delete(this.urlGetSnippet + '/' + id)
 				.toPromise()
 				.then(() => null)
     			.catch(this.handleError);
 	}
 
-	saveSnippet(snippet: Snippet): Observable<Snippet> {
+	public saveSnippet(snippet: Snippet): Observable<Snippet> {
 		var body = this.snippetToJsonString(snippet);
 		let headers = new Headers({ 'Content-Type': 'application/json' });
     	let options = new RequestOptions({ headers: headers });
@@ -45,15 +45,47 @@ export class SnippetService {
              .catch(this.handleError);
 	}
 
-	start() {
+	public connect(url: string): Subject<MessageEvent> {
+        if(!this.socket) {
+            this.socket = this.create(url);
+        }
+
+        return this.socket;
+    }
+
+    private create(url: string): Subject<MessageEvent> {
+	    let ws = new WebSocket(url);
+
+	    let observable = Observable.create(
+	        (obs: Observer<MessageEvent>) => {
+	            ws.onmessage = obs.next.bind(obs);
+	            ws.onerror = obs.error.bind(obs);
+	            ws.onclose = obs.complete.bind(obs);
+
+	            return ws.close.bind(ws);
+	        }
+	    );
+
+	    let observer = {
+	        next: (data: Object) => {
+	            if (ws.readyState === WebSocket.OPEN) {
+	                ws.send(JSON.stringify(data));
+	            }
+	        },
+	    };
+
+	    return Subject.create(observer, observable);
+	}
+
+	public start() {
 		return this.http.post(this.urlStart, "")
 			.toPromise()
 			.then(() => null)
 			.catch(this.handleError);
 	}
 
-	stop(): Promise<void> {
-		return this.http.post(this.urlStop, "")
+	public pause() {
+		return this.http.post(this.urlPause, "")
 			.toPromise()
 			.then(() => null)
 			.catch(this.handleError);

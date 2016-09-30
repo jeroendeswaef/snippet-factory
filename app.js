@@ -1,10 +1,14 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 
+var server = require('http').createServer();
+var WebSocketServer = require('ws').Server;
+var wss = new WebSocketServer({ server: server });
+
 var Snippet = require('./public/app/snippet').Snippet;
+var ServerStatus = require('./public/app/server-status').ServerStatus;
 var snippetService = require('./snippet-service');
 var FileSystemModifier = require('./filesystem-modifier');
-
 var app = express();
 
 var ArgumentParser = require('argparse').ArgumentParser;
@@ -20,9 +24,13 @@ parser.addArgument(
         required: true
     }
 );
+var port = 3000;
 var args = parser.parseArgs();
 app.use(bodyParser.json());  
 app.use('/static', express.static('public'));
+
+var wsConnections = [];
+var currentServerStatus = ServerStatus.Running;
 
 var modifier = new FileSystemModifier(args.directory);
 
@@ -68,9 +76,11 @@ app.delete('/api/snippet/:id', function(req, res) {
 });
 
 // Restoring the original values
-app.post('/api/stop', function(req, res) {
+app.post('/api/pause', function(req, res) {
 	modifier.stop().then(function() {
 		res.send("OK");
+		currentServerStatus = ServerStatus.Paused;
+		broadcastServerStatus();
 	}).catch(function (err) {
 		res.status(500).send(err);
 	});
@@ -80,9 +90,15 @@ app.post('/api/stop', function(req, res) {
 app.post('/api/start', function(req, res) {
 	modifier.start().then(function() {
 		res.send("OK");
+		currentServerStatus = ServerStatus.Running;
+		broadcastServerStatus();
 	}).catch(function (err) {
 		res.status(500).send(err);
 	});
+});
+
+app.all('/api/*', function(req, res) {
+	res.status(500).send("Route not found");
 });
 
 app.all('*', function(req, res) {
@@ -90,6 +106,16 @@ app.all('*', function(req, res) {
 });
 
 process.stdin.resume();//so the program will not close instantly
+
+
+function broadcastServerStatus() {
+	for(var i = 0; i < wsConnections.length; i++) {
+    	// Could have been set to null if client closed
+    	if (wsConnections[i] !== null) {
+	    	wsConnections[i].send(ServerStatus[currentServerStatus]);
+	    }
+	}
+}
 
 /**
  * Implementing a graceful shutdown method, so when you hit Ctrl-C,
@@ -101,7 +127,18 @@ process.stdin.resume();//so the program will not close instantly
 function cleanup(){
     var ret;
     modifier.stop().then(function() {
-  	    ret = true;
+  	    for(var i = 0; i < wsConnections.length; i++) {
+  	    	// Could have been set to null if client closed
+  	    	if (wsConnections[i] !== null) {
+	  	    	wsConnections[i].send(ServerStatus[ServerStatus.Stopped]);
+	  	    	wsConnections[i].close(1000);
+	  	    	// Unfortunately, the callback on the close-method is not working
+	  	    	// So we have to do it with setTimeout.
+	  	    }
+  	    }
+  	    setTimeout(function() {
+  	    	ret = true;
+  	    }, 1000);
     }).catch(function(err) {
     	console.error(err);
     });
@@ -130,10 +167,24 @@ process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
 
 snippetService.initialize().then(function() {
 	modifier.start().then(function() {
-		app.listen(3000, function () {
-			console.log('Started ui on http://localhost:3000/');
+		server.on('request', app);
+		server.listen(port, null, null, function () {
+			console.log('Started ui on http://localhost:' + port + '/');
 		});
 	}).catch(function(err) {
 		console.error("Unable to start modifier", err);
 	});
+	var connectionCount = 0;
+	wss.on('connection', function connection(ws) {
+
+		ws.on('close', function() {
+		  	wsConnections[this.mId] = null;
+		});
+
+		ws.send(ServerStatus[currentServerStatus]);
+		ws.mId = connectionCount;
+		connectionCount++;
+		wsConnections.push(ws);
+	});
+
 });

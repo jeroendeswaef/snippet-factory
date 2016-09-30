@@ -14,14 +14,23 @@ import './rxjs-operators';
     </a>
 
     <button *ngIf="serverStatus == ServerStatus.Running" 
-        (click)="stopServer(); $event.stopPropagation()" 
-        [class.disabled]="isStopping" class="ui green button">
-            <i class="stop icon"></i>Stop</button>
+        (click)="pauseServer(); $event.stopPropagation()" 
+        [class.disabled]="isPausing" class="ui green button">
+            <i class="pause icon"></i>Pause</button>
 
-    <button *ngIf="serverStatus == ServerStatus.Stopped" 
+    <button *ngIf="serverStatus == ServerStatus.Paused" 
         (click)="startServer(); $event.stopPropagation()" 
         [class.disabled]="isStarting" class="ui green button">
             <i class="play icon"></i>Start</button>
+
+    <template [ngIf]="serverStatus == ServerStatus.Stopped">
+        <button class="ui green button disabled">
+            <i class="play icon"></i>Start</button>
+
+        <div class="ui left pointing red basic label">
+            Restart from the command line.
+        </div>
+    </template>
 
     <table class="ui celled padded table">
         <thead>
@@ -48,23 +57,32 @@ import './rxjs-operators';
 })
 export class SnippetListComponent implements OnInit { 
     public ServerStatus = ServerStatus;
+
     snippets: Snippet[];
     errorMessage: string;
-    isStopping: boolean;
+    isPausing: boolean;
     isStarting: boolean;
     serverStatus: ServerStatus;
     
-    constructor (private snippedService: SnippetService) {
-        // TODO sync this from server
-        this.serverStatus = ServerStatus.Running;
+    constructor (
+        private snippetService: SnippetService
+    ) {
+        this.serverStatus = ServerStatus.Unknown;
     }
     
     ngOnInit() {
         this.getSnippets();
+        this.snippetService.connect('ws://' + window.location.host)
+            .subscribe(
+                response => this.setServerStatus(ServerStatus[<string>response.data])
+            )
+    };
+
+    ngOnDestroy() {
     }
 
     getSnippets() {
-        this.snippedService.getSnippets()
+        this.snippetService.getSnippets()
             .subscribe(
                snippets => this.snippets = snippets,
                error =>  this.errorMessage = <any>error
@@ -72,30 +90,34 @@ export class SnippetListComponent implements OnInit {
     }
 
     removeSnippet(snippet: Snippet) {
-         this.snippedService.removeSnippet(snippet.id)
+         this.snippetService.removeSnippet(snippet.id)
              .then(() => {
                  this.snippets = this.snippets.filter(s => s !== snippet)
              })
     }
 
-    stopServer() {
-        this.isStopping = true;
-        this.snippedService.stop().then(() => {
-            this.isStopping = false;
-            this.serverStatus = ServerStatus.Stopped;
-        })
+    pauseServer() {
+        this.isPausing = true;
+        this.snippetService.pause().then(() => {
+            this.isPausing = false;
+            this.setServerStatus(ServerStatus.Paused);
+        });
     }
 
     startServer() {
         this.isStarting = true;
-        this.snippedService.start().then(() => {
+        this.snippetService.start().then(() => {
             this.isStarting = false;
-            this.serverStatus = ServerStatus.Running;
-        })
+            this.setServerStatus(ServerStatus.Running);
+        });
     }
 
     sortedSnippets(): Snippet[] {
         return this.snippets;
+    }
+
+    private setServerStatus(newStatus: ServerStatus) {
+        this.serverStatus = newStatus;
     }
 
 }

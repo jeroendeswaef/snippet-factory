@@ -37,7 +37,7 @@ import './rxjs-operators';
     `
 })
 export class EditSnippetComponent { 
-    @Output() save: EventEmitter<Snippet> = new EventEmitter();
+    @Output() save: EventEmitter<Snippet> = new EventEmitter<Snippet>();
     snippet: Snippet;
     errorMessage: string;
     isCreating: boolean;
