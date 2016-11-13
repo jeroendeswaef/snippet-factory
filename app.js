@@ -166,13 +166,17 @@ process.on('SIGINT', exitHandler.bind(null, {exit:true}));
 process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
 
 snippetService.initialize().then(function() {
-	modifier.start().then(function() {
+	var startUi = function() {
 		server.on('request', app);
 		server.listen(port, null, null, function () {
 			console.log('Started ui on http://localhost:' + port + '/');
 		});
+	};
+	modifier.start().then(function() {
+		startUi();
 	}).catch(function(err) {
 		console.error("Unable to start modifier", err);
+		startUi();
 	});
 	var connectionCount = 0;
 	wss.on('connection', function connection(ws) {

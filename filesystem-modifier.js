@@ -4,6 +4,8 @@ var path = require('path');
 
 var fs = require('fs');
 var snippetService = require('./snippet-service');
+var ModificationType = require('./public/app/modification-type').ModificationType;
+
 var inlineReplacerFactory = require('./inline-replacer-factory');
 
 var replacements = {};
@@ -14,6 +16,14 @@ function FilesystemModifier(path) {
 
 function escapeRegExp(str) {
   return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+}
+
+function replaceTarget(targetStr, inlineReplacer, original, count, filename) {
+	return inlineReplacer.comment('S_' + count) + ' ' +
+		(targetStr
+			.replace('||0||', original)
+			.replace('||F||', filename))
+		+ ' ' + inlineReplacer.comment('E_' + count);
 }
 
 FilesystemModifier.prototype.start = function() {
@@ -39,27 +49,36 @@ FilesystemModifier.prototype.start = function() {
 									fs.readFile(fullFilePath, 'utf8', function(err, contents) {
 										if (err) reject(err);
 										else {
-											var searchRe = new RegExp(item.search, 'g');
-											var match;
-											var newContents = "";
-											var pos = 0;
-											while ((match = searchRe.exec(contents)) !== null) {
-												var lastReplacementPos = replacements[fullFilePath].length;
-											    //console.info(filePath + ", match found at " + match.index, searchRe.lastIndex, contents.substring(match.index, searchRe.lastIndex));
-												var original = contents.substring(match.index, searchRe.lastIndex);
-												newContents += (
-													contents.substring(pos, match.index) +
-													inlineReplacer.comment('S_' + lastReplacementPos) + ' ' +
-													item.replace.replace('||0||', original) +
-													' ' + inlineReplacer.comment('E_' + lastReplacementPos)
-												);
-												replacements[fullFilePath].push(original);
-												pos = searchRe.lastIndex;
+											if (item.modificationType === ModificationType[ModificationType.RegExp]) {
+												var searchRe = new RegExp(item.search, 'g');
+												var match;
+												var newContents = "";
+												var pos = 0;
+												while ((match = searchRe.exec(contents)) !== null) {
+													var lastReplacementPos = replacements[fullFilePath].length;
+												    //console.info(filePath + ", match found at " + match.index, searchRe.lastIndex, contents.substring(match.index, searchRe.lastIndex));
+													var original = contents.substring(match.index, searchRe.lastIndex);
+													newContents += (
+														contents.substring(pos, match.index) +
+														/*inlineReplacer.comment('S_' + lastReplacementPos) + ' ' +
+														item.replace.replace('||0||', original) +
+														' ' + inlineReplacer.comment('E_' + lastReplacementPos)*/
+														replaceTarget(item.replace, inlineReplacer, original, lastReplacementPos, filePath)
+													);
+													replacements[fullFilePath].push(original);
+													pos = searchRe.lastIndex;
+												}
+												newContents += contents.substring(pos, contents.length);
+												fs.writeFile(fullFilePath, newContents, function(err) {
+										    		if (err) reject(err);
+										    	});
+											} else if (item.modificationType === ModificationType[ModificationType.InsertAtStartOfFile]) {
+												var newContents = replaceTarget(item.insersion, inlineReplacer, '', 0, filePath) + contents;
+												replacements[fullFilePath].push('');
+												fs.writeFile(fullFilePath, newContents, function(err) {
+										    		if (err) reject(err);
+										    	});
 											}
-											newContents += contents.substring(pos, contents.length);
-											fs.writeFile(fullFilePath, newContents, function(err) {
-									    		if (err) reject(err);
-									    	});
 										}
 									});
 								} else {
