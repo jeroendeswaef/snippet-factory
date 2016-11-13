@@ -5,7 +5,7 @@ var Snippet = require('./public/app/snippet').Snippet;
 var snippetTable;
 
 var createSnippetFromDBAttrs = function(attrs) {
-	return new Snippet(attrs.id, attrs.name, attrs.fileSelector, attrs.search, attrs.replace);
+	return new Snippet(attrs.id, attrs.name, attrs.fileSelector, attrs.modificationType, attrs.search, attrs.replace, attrs.insersion);
 };
 
 module.exports = {
@@ -14,8 +14,10 @@ module.exports = {
 		snippetTable = sequelize.define('snippet', {
 		    name: { type: Sequelize.STRING, allowNull: false, unique: true, validate: { notEmpty: true } },
 		    fileSelector: { type: Sequelize.STRING, allowNull: false },
-		    search: { type: Sequelize.STRING, allowNull: false },
-		    replace: { type: Sequelize.STRING, allowNull: false }
+		    modificationType: { type: Sequelize.STRING, allowNull: false },
+		    search: { type: Sequelize.STRING, allowNull: true },
+		    replace: { type: Sequelize.STRING, allowNull: true },
+		    insersion: { type: Sequelize.STRING, allowNull: true }
 		});
 		return sequelize.sync();
 	},

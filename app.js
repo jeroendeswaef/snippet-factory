@@ -56,7 +56,7 @@ app.get('/api/snippet/:id', function(req, res) {
 
 // Saving a snippet (creating or editing)
 app.post('/api/snippet', function(req, res) {
-	var snippet = new Snippet(req.body.id, req.body.name, req.body.fileSelector, req.body.search, req.body.replace);
+	var snippet = new Snippet(req.body.id, req.body.name, req.body.fileSelector, req.body.modificationType, req.body.search, req.body.replace, req.body.insersion);
 	snippetService.save(snippet)
 		.then(function(snippet) {
 			res.json(snippet);

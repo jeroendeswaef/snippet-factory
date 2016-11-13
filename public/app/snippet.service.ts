@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Http, Headers, RequestOptionsArgs, RequestOptions, Response } from '@angular/http';
 import { Subject, Observable, Observer } from 'rxjs/Rx';
 import { Snippet } from './snippet';
+import { ModificationType } from './modification-type';
 
 @Injectable()
 export class SnippetService {
@@ -92,11 +93,14 @@ export class SnippetService {
 	}
 
 	private extractSnippet(obj: Map<string, any>): Snippet {
-		return new Snippet(obj['id'], obj['name'], obj['fileSelector'], obj['search'], obj['replace']);
+		// Had to do this funcky cast, because otherwise, it wouldn't correctly create a ModificationType
+		const modificationTypeStr = <string>obj['modificationType'];
+		const modificationType: ModificationType = <ModificationType>(ModificationType[modificationTypeStr]);
+		return new Snippet(obj['id'], obj['name'], obj['fileSelector'], modificationType, obj['search'], obj['replace'], obj['insersion']);
 	}
 
 	private snippetToJsonString(snippet: Snippet): string {
-		return JSON.stringify({ id: snippet.id, name: snippet.name, fileSelector: snippet.fileSelector, search: snippet.search, replace: snippet.replace });
+		return JSON.stringify({ id: snippet.id, name: snippet.name, fileSelector: snippet.fileSelector, modificationType: ModificationType[snippet.modificationType], search: snippet.search, replace: snippet.replace, insersion: snippet.insersion });
 	}
 
 	private extractData(res: Response) {
