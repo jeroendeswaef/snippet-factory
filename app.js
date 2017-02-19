@@ -24,13 +24,23 @@ parser.addArgument(
         required: true
     }
 );
+parser.addArgument(
+    [ '-p', '--start-paused' ],
+    {
+        help: 'Start the ui without doing any modifications to the target directory yet',
+        required: false,
+        action: 'storeTrue',
+        defaultValue: false
+    }
+);
 var port = 3000;
 var args = parser.parseArgs();
-app.use(bodyParser.json());  
+
+app.use(bodyParser.json());
 app.use('/static', express.static('public'));
 
 var wsConnections = [];
-var currentServerStatus = ServerStatus.Running;
+var currentServerStatus = ServerStatus.Stopped;
 
 var modifier = new FileSystemModifier(args.directory);
 
@@ -145,7 +155,7 @@ function cleanup(){
     while(ret === undefined) {
         require('deasync').runLoopOnce();
     }
-    return ret;    
+    return ret;
 }
 
 function exitHandler(options, err) {
@@ -172,19 +182,24 @@ snippetService.initialize().then(function() {
 			console.log('Started ui on http://localhost:' + port + '/');
 		});
 	};
-	modifier.start().then(function() {
-		startUi();
-	}).catch(function(err) {
-		console.error("Unable to start modifier", err);
-		startUi();
-	});
+  if (!args.start_paused) {
+    modifier.start().then(function() {
+      currentServerStatus = ServerStatus.Running;
+      startUi();
+    }).catch(function(err) {
+      console.error("Unable to start modifier", err);
+      startUi();
+    });
+  } else {
+    currentServerStatus = ServerStatus.Paused;
+    startUi();
+  }
 	var connectionCount = 0;
 	wss.on('connection', function connection(ws) {
 
 		ws.on('close', function() {
 		  	wsConnections[this.mId] = null;
 		});
-
 		ws.send(ServerStatus[currentServerStatus]);
 		ws.mId = connectionCount;
 		connectionCount++;

@@ -35,7 +35,6 @@ FilesystemModifier.prototype.start = function () {
     console.info(path.join(self.basePath, '.gitignore'));
     if (fs.existsSync(path.join(self.basePath, '.gitignore'))) {
       ignore = ignoreParser.compile(fs.readFileSync(path.join(self.basePath, '.gitignore'), 'utf8'));
-      console.info('ok>', ignore.accepts('dist/client/index.html'));
     }
     replacements = {};
     let filesSeenCount = 0;

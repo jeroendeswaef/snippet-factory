@@ -13,13 +13,13 @@ import './rxjs-operators';
         <button class="ui button">Add snippet</button>
     </a>
 
-    <button *ngIf="serverStatus == ServerStatus.Running" 
-        (click)="pauseServer(); $event.stopPropagation()" 
+    <button *ngIf="serverStatus == ServerStatus.Running"
+        (click)="pauseServer(); $event.stopPropagation()"
         [class.disabled]="isPausing" class="ui green button">
             <i class="pause icon"></i>Pause</button>
 
-    <button *ngIf="serverStatus == ServerStatus.Paused" 
-        (click)="startServer(); $event.stopPropagation()" 
+    <button *ngIf="serverStatus == ServerStatus.Paused"
+        (click)="startServer(); $event.stopPropagation()"
         [class.disabled]="isStarting" class="ui green button">
             <i class="play icon"></i>Start</button>
 
@@ -55,7 +55,7 @@ import './rxjs-operators';
     </table>
     `
 })
-export class SnippetListComponent implements OnInit { 
+export class SnippetListComponent implements OnInit {
     public ServerStatus = ServerStatus;
 
     snippets: Snippet[];
@@ -63,18 +63,20 @@ export class SnippetListComponent implements OnInit {
     isPausing: boolean;
     isStarting: boolean;
     serverStatus: ServerStatus;
-    
+
     constructor (
         private snippetService: SnippetService
     ) {
         this.serverStatus = ServerStatus.Unknown;
     }
-    
+
     ngOnInit() {
         this.getSnippets();
         this.snippetService.connect('ws://' + window.location.host)
             .subscribe(
-                response => this.setServerStatus(ServerStatus[<string>response.data])
+                response => {
+                  this.setServerStatus(ServerStatus[<string>response.data])
+                }
             )
     };
 
