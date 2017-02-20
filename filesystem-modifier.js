@@ -1,6 +1,7 @@
 var _ = require('lodash/core');
 var filewalker = require('filewalker');
 var path = require('path');
+var Promise = require("bluebird");
 
 var fs = require('fs');
 var ignoreParser = require('gitignore-parser');
@@ -28,16 +29,78 @@ function replaceTarget(targetStr, inlineReplacer, original, count, filename) {
     + ' ' + inlineReplacer.comment('E_' + count);
 }
 
+FilesystemModifier.prototype.applySnippetOnFile = function (snippet, filePath, replacements) {
+  const self = this;
+
+  var inlineReplacer = inlineReplacerFactory.getReplaceByFilename(filePath);
+  if (inlineReplacer) {
+    return new Promise(function (resolveReplacer, rejectReplacer) {
+      const fullFilePath = path.join(self.basePath, filePath);
+      replacements[fullFilePath] = (replacements[fullFilePath] || []);
+      fs.readFile(fullFilePath, 'utf8', function (err, contents) {
+        console.info('reading ' + fullFilePath, contents.length);
+        if (err) {
+          rejectReplacer(err);
+        } else {
+          if (snippet.modificationType === ModificationType[ModificationType.RegExp]) {
+            var searchRe = new RegExp(snippet.search, 'g');
+            var match;
+            var newContents = "";
+            var pos = 0;
+            while ((match = searchRe.exec(contents)) !== null) {
+              var lastReplacementPos = replacements[fullFilePath].length;
+              //console.info(filePath + ", match found at " + match.index, searchRe.lastIndex, contents.substring(match.index, searchRe.lastIndex));
+              var original = contents.substring(match.index, searchRe.lastIndex);
+              newContents += (
+                contents.substring(pos, match.index) +
+                /*inlineReplacer.comment('S_' + lastReplacementPos) + ' ' +
+                snippet.replace.replace('||0||', original) +
+                ' ' + inlineReplacer.comment('E_' + lastReplacementPos)*/
+                replaceTarget(snippet.replace, inlineReplacer, original, lastReplacementPos, filePath)
+              );
+              replacements[fullFilePath].push(original);
+              pos = searchRe.lastIndex;
+            }
+            newContents += contents.substring(pos, contents.length);
+            fs.writeFile(fullFilePath, newContents, function (err) {
+              if (err) {
+                rejectReplacer(err);
+              }
+              else {
+                resolveReplacer();
+              }
+            });
+          } else if (snippet.modificationType === ModificationType[ModificationType.InsertAtStartOfFile]) {
+            var lastReplacementPos = replacements[fullFilePath].length;
+            var newContents = replaceTarget(snippet.insersion, inlineReplacer, '', lastReplacementPos, filePath) + contents;
+            replacements[fullFilePath].push('');
+            fs.writeFile(fullFilePath, newContents, function (err) {
+              if (err) {
+                rejectReplacer(err);
+              }
+              else {
+                resolveReplacer();
+              }
+            });
+          }
+        }
+      });
+    });
+  } else {
+    console.warn('No replacer found for: ' + filePath);
+  }
+};
+
 FilesystemModifier.prototype.start = function () {
   var self = this;
   return new Promise(function (resolve, reject) {
     let ignore;
-    console.info(path.join(self.basePath, '.gitignore'));
     if (fs.existsSync(path.join(self.basePath, '.gitignore'))) {
       ignore = ignoreParser.compile(fs.readFileSync(path.join(self.basePath, '.gitignore'), 'utf8'));
     }
     replacements = {};
     let filesSeenCount = 0;
+    const filePromises = [];
     snippetService.getAll()
       .then(function (snippets) {
         var snippetsById = _.reduce(snippets, function (acc, item) {
@@ -47,61 +110,30 @@ FilesystemModifier.prototype.start = function () {
         }, {});
         filewalker(self.basePath)
           .on('file', function (filePath) {
-            const fullFilePath = path.join(self.basePath, filePath);
             if (!ignore || ignore.accepts(filePath)) {
               filesSeenCount++;
-              Object.keys(snippetsById).forEach(function (id) {
-                var item = snippetsById[id];
-                if (item.fileRe.test(filePath)) {
-                  var inlineReplacer = inlineReplacerFactory.getReplaceByFilename(filePath);
-                  if (inlineReplacer) {
-                    replacements[fullFilePath] = [];
-                    fs.readFile(fullFilePath, 'utf8', function (err, contents) {
-                      if (err) reject(err);
-                      else {
-                        if (item.modificationType === ModificationType[ModificationType.RegExp]) {
-                          var searchRe = new RegExp(item.search, 'g');
-                          var match;
-                          var newContents = "";
-                          var pos = 0;
-                          while ((match = searchRe.exec(contents)) !== null) {
-                            var lastReplacementPos = replacements[fullFilePath].length;
-                            //console.info(filePath + ", match found at " + match.index, searchRe.lastIndex, contents.substring(match.index, searchRe.lastIndex));
-                            var original = contents.substring(match.index, searchRe.lastIndex);
-                            newContents += (
-                              contents.substring(pos, match.index) +
-                              /*inlineReplacer.comment('S_' + lastReplacementPos) + ' ' +
-                              item.replace.replace('||0||', original) +
-                              ' ' + inlineReplacer.comment('E_' + lastReplacementPos)*/
-                              replaceTarget(item.replace, inlineReplacer, original, lastReplacementPos, filePath)
-                            );
-                            replacements[fullFilePath].push(original);
-                            pos = searchRe.lastIndex;
-                          }
-                          newContents += contents.substring(pos, contents.length);
-                          fs.writeFile(fullFilePath, newContents, function (err) {
-                            if (err) reject(err);
-                          });
-                        } else if (item.modificationType === ModificationType[ModificationType.InsertAtStartOfFile]) {
-                          var newContents = replaceTarget(item.insersion, inlineReplacer, '', 0, filePath) + contents;
-                          replacements[fullFilePath].push('');
-                          fs.writeFile(fullFilePath, newContents, function (err) {
-                            if (err) reject(err);
-                          });
-                        }
-                      }
-                    });
-                  } else {
-                    console.warn('No replacer found for: ' + filePath);
-                  }
-                }
-              });
+              const appliedSnippets = Object.keys(snippetsById)
+                .filter((snippetId) => snippetsById[snippetId].fileRe.test(filePath));
+              if (appliedSnippets.length > 0) {
+                // Running the modifications for the same file sequentially
+                filePromises.push(appliedSnippets.reduce(function (previous, snippetId) {
+                  return previous.then(function () {
+                    return self.applySnippetOnFile(snippetsById[snippetId], filePath, replacements);
+                  });
+                }, Promise.resolve()));
+              }
             }
           })
           .on('error', reject)
           .on('done', () => {
-            console.info(`Files seen: ${filesSeenCount}`);
-            resolve();
+            console.info(`Files seen: ${filesSeenCount}, # promises: ${filePromises.length}`);
+            Promise.all(filePromises)
+              .then(() => {
+                resolve();
+              })
+              .catch((err) => {
+                reject(err);
+              });
           })
           .walk();
       }).catch(function (err) {
